@@ -1,6 +1,7 @@
 'use client'
 
 import { type Session, createClientComponentClient } from "@supabase/auth-helpers-nextjs"
+import Image from "next/image"
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 export function AuthButton({ session }: { session: Session | null }) {
@@ -43,10 +44,12 @@ export function AuthButton({ session }: { session: Session | null }) {
                         onClick={() => setIsOpen(!isOpen)}
                         className="flex items-center space-x-2 focus:outline-none"
                     >
-                        <img
-                            src={userImage}
-                            alt="Profile"
-                            className="w-10 h-10 rounded-full border-2 border-gray-200"
+                        <Image
+                            src={userImage || `https://ui-avatars.com/api/?name=${userName}&background=0D8ABC&color=fff&size=128`}
+                            alt={userName || "Usuario"}
+                            width={40}
+                            height={40}
+                            className="rounded-full border-2 border-gray-200"
                         />
                     </button>
 

@@ -1,3 +1,5 @@
+import Image from "next/image"
+
 export const TableStandings = ({ equipos }: {
     equipos: {
         nombre: string | null;
@@ -50,9 +52,11 @@ export const TableStandings = ({ equipos }: {
                                     <tr key={index} className="border-t">
                                         <td className="py-3">{index + 1}</td>
                                         <td className="py-3">
-                                            <img
-                                                src={equipo.logo || "/images/placeholder.png"}
+                                            <Image
+                                                src={equipo.logo || `https://ui-avatars.com/api/?name=${equipo.nombre}+FC&background=0D8ABC&color=fff&size=128`}
                                                 alt={equipo.nombre || "Equipo"}
+                                                width={30}
+                                                height={30}
                                                 className="size-9 rounded-full"
                                             />
                                         </td>

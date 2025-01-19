@@ -2,11 +2,12 @@
 import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 import { NavBar } from "./components/layout/navBarComponents";
-import { Trophy, Calendar, Users, Search, Bell, ChevronRight } from "lucide-react";
+import { Calendar, Users } from "lucide-react";
 import { NextMatch } from "./components/match/next-match";
 import { TableStandings } from "./components/standings/table-standings";
 import { Database } from "./types/database";
 import { Stats } from "./components/statistics/stats";
+import { Equipo } from "./interfaces/equipoInterfaces"
 
 
 export default async function Home() {
