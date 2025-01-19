@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "gen": "npx supabase gen types typescript --project-id alhenskfrlmnraaxqnzi > ./src/app/types/database.ts"
   },
   "dependencies": {
     "@supabase/auth-helpers-nextjs": "^0.10.0",
