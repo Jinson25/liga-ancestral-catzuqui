@@ -53,11 +53,12 @@ export const TableStandings = ({ equipos }: {
                                         <td className="py-3">{index + 1}</td>
                                         <td className="py-3">
                                             <Image
-                                                src={equipo.logo || `https://ui-avatars.com/api/?name=${equipo.nombre}+FC&background=0D8ABC&color=fff&size=128`}
+                                                src={equipo.logo || `https://ui-avatars.com/api/?name=${encodeURIComponent(equipo.nombre || 'Team')}+FC&background=0D8ABC&color=fff&size=128`}
                                                 alt={equipo.nombre || "Equipo"}
                                                 width={30}
                                                 height={30}
                                                 className="size-9 rounded-full"
+                                                unoptimized
                                             />
                                         </td>
                                         <td className="py-3 font-medium">{equipo.nombre}</td>
