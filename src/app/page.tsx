@@ -9,7 +9,8 @@ import { Stats } from "./components/statistics/stats";
 import { Equipo } from "./interfaces/equipoInterfaces"
 
 export default async function Home() {
-  const supabase = createServerComponentClient<Database>({ cookies });
+  const cookieStore = cookies();
+  const supabase = createServerComponentClient<Database>({ cookies: () => cookieStore });
 
   const { data: equiposData } = await supabase
     .from("equipos")

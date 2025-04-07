@@ -24,7 +24,7 @@ export function AuthButton({ session }: { session: Session | null }) {
                     .select('nombre')
                     .eq('id', user.id)
                     .single();
-                
+
                 if (!error && data) {
                     setUserDBName(data.nombre);
                 }
@@ -86,6 +86,8 @@ export function AuthButton({ session }: { session: Session | null }) {
 
                     {isOpen && (
                         <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1">
+                            <a href="/liga" className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Liga</a>
+                            <a href="/perfil" className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Perfil</a>
                             <button
                                 onClick={handleSignOut}
                                 className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
