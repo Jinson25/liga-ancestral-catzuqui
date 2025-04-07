@@ -3,18 +3,37 @@
 import { type Session, createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import Image from "next/image"
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AuthForms } from "./auth-forms";
 
 export function AuthButton({ session }: { session: Session | null }) {
     const [isOpen, setIsOpen] = useState(false);
     const [showAuthModal, setShowAuthModal] = useState(false);
     const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+    const [userDBName, setUserDBName] = useState<string | null>(null);
     const supabase = createClientComponentClient();
     const router = useRouter();
 
-    const user = session?.user;  
-    const userName = user?.user_metadata.full_name || ;
+    const user = session?.user;
+
+    useEffect(() => {
+        async function fetchUserName() {
+            if (user) {
+                const { data, error } = await supabase
+                    .from('usuarios')
+                    .select('nombre')
+                    .eq('id', user.id)
+                    .single();
+                
+                if (!error && data) {
+                    setUserDBName(data.nombre);
+                }
+            }
+        }
+        fetchUserName();
+    }, [user, supabase]);
+
+    const userName = user?.user_metadata.full_name || userDBName || user?.email;
     const userImage = user?.user_metadata.avatar_url || `https://ui-avatars.com/api/?name=${userName}&background=random`;
 
     const handleGoogleSignIn = async () => {
@@ -56,7 +75,7 @@ export function AuthButton({ session }: { session: Session | null }) {
                         className="flex items-center space-x-2 focus:outline-none"
                     >
                         <Image
-                            src={userImage || `https://ui-avatars.com/api/?name=${userName}&background=0D8ABC&color=fff&size=128`}
+                            src={userImage}
                             alt={userName || "Usuario"}
                             width={40}
                             height={40}
