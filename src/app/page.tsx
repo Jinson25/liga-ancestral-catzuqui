@@ -25,7 +25,7 @@ export default async function Home() {
         // Verificar si es una URL válida
         new URL(equipo.logo);
         logoUrl = equipo.logo;
-      } catch (e) {
+      } catch {
         console.error('URL inválida para el logo:', equipo.logo);
       }
     }

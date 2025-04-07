@@ -3,14 +3,7 @@
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import { useEffect, useState } from "react"
 
-interface Liga {
-    id: string
-    nombre: string
-    presidente_id: string
-}
-
 export default function GestionarLiga() {
-    const [liga, setLiga] = useState<Liga | null>(null)
     const [loading, setLoading] = useState(true)
     const supabase = createClientComponentClient()
 
@@ -26,7 +19,8 @@ export default function GestionarLiga() {
                 .single()
 
             if (!error && data) {
-                setLiga(data)
+                // Por ahora solo verificamos si existe la liga
+                console.log('Liga encontrada:', data)
             }
             setLoading(false)
         }

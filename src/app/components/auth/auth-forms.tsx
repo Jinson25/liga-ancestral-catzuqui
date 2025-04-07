@@ -4,14 +4,15 @@ import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { User, Mail, Lock, AlertCircle, Loader2 } from 'lucide-react'
+import Image from 'next/image'
 
-export function AuthForms({ mode: initialMode, onClose }: { mode: 'login' | 'register', onClose: () => void }) {
+export function AuthForms({ onClose }: { onClose: () => void }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [username, setUsername] = useState('')
-  const [error, setError] = useState('')
+  const [errorMessage, setErrorMessage] = useState('')
   const [loading, setLoading] = useState(false)
-  const [mode, setMode] = useState(initialMode)
+  const [mode, setMode] = useState<'login' | 'register'>('login')
   const supabase = createClientComponentClient()
   const router = useRouter()
 
@@ -25,8 +26,12 @@ export function AuthForms({ mode: initialMode, onClose }: { mode: 'login' | 'reg
         }
       })
       if (error) throw error
-    } catch (error) {
-      setError('Error al iniciar sesión con Google')
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        setErrorMessage(error.message)
+      } else {
+        setErrorMessage('Ha ocurrido un error inesperado')
+      }
     } finally {
       setLoading(false)
     }
@@ -34,16 +39,16 @@ export function AuthForms({ mode: initialMode, onClose }: { mode: 'login' | 'reg
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError('')
+    setErrorMessage('')
     setLoading(true)
 
     try {
       if (mode === 'login') {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password
         })
-        if (error) throw error
+        if (signInError) throw signInError
 
         // Only close and refresh if successful
         onClose()
@@ -99,11 +104,15 @@ export function AuthForms({ mode: initialMode, onClose }: { mode: 'login' | 'reg
         onClose()
         router.refresh()
       }
-    } catch (error: any) {
-      if (error.message?.includes('Too many requests')) {
-        setError('Demasiados intentos. Por favor, espera unos minutos.')
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        if (error.message?.includes('Too many requests')) {
+          setErrorMessage('Demasiados intentos. Por favor, espera unos minutos.')
+        } else {
+          setErrorMessage(error.message || 'Error al procesar la solicitud')
+        }
       } else {
-        setError(error.message || 'Error al procesar la solicitud')
+        setErrorMessage('Ha ocurrido un error inesperado')
       }
     } finally {
       setLoading(false)
@@ -177,10 +186,10 @@ export function AuthForms({ mode: initialMode, onClose }: { mode: 'login' | 'reg
           </div>
         </div>
 
-        {error && (
+        {errorMessage && (
           <div className="flex items-center gap-2 text-red-600 bg-red-50 p-3 rounded-lg">
             <AlertCircle size={20} />
-            <p className="text-sm">{error}</p>
+            <p className="text-sm">{errorMessage}</p>
           </div>
         )}
 
@@ -231,7 +240,7 @@ export function AuthForms({ mode: initialMode, onClose }: { mode: 'login' | 'reg
           disabled={loading}
           className="mt-4 w-full flex items-center justify-center gap-3 py-2.5 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
         >
-          <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
+          <Image src="https://www.google.com/favicon.ico" alt="Google" width={20} height={20} />
           Iniciar con Google
           {loading && <Loader2 size={20} className="animate-spin" />}
         </button>
