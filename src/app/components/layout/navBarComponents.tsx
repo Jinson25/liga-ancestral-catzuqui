@@ -25,7 +25,7 @@ export function NavBar() {
     }, [supabase])
 
     return (
-        <div className="flex flex-wrap justify-between items-center mb-6 space-y-4 sm:space-y-0 md:space-x-4 z-99">
+        <div className="flex flex-wrap justify-between items-center mb-6 space-y-4 sm:space-y-0 md:space-x-4 z-20">
             <div className="flex items-center space-x-2">
                 <div className="h-10 w-10 rounded-full bg-teal-600 flex items-center justify-center">
                     <Trophy className="h-6 w-6 text-white" />

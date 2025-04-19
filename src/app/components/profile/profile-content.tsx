@@ -90,8 +90,8 @@ export function ProfileContent() {
     if (!profile) return null
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-green-200 via-blue-100 to-blue-400 pt-5 z-0 font-sans flex items-center justify-center">
-            <div className="w-full max-w-4xl mx-auto sm:px-6 lg:px-8 z-10">
+        <div className=" pt-5 z-0 font-sans flex items-center justify-center">
+            <div className="w-full max-w-7xl mx-auto sm:px-8 lg:px-14 z-0"> 
                 <div className="bg-white rounded-3xl shadow-2xl border-4 border-blue-200 p-0 md:p-0 overflow-hidden">
                     {/* Portada y perfil */}
                     <div className="relative bg-gradient-to-r from-blue-700 via-teal-500 to-green-400 p-6 md:p-10 flex flex-col md:flex-row items-center md:items-end gap-4 md:gap-10">
