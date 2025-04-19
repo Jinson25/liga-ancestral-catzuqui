@@ -6,12 +6,27 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { AuthForms } from "./auth-forms";
 
-export function AuthButton({ session }: { session: Session | null }) {
+export function AuthButton() {
+    const [session, setSession] = useState<Session | null>(null);
     const [isOpen, setIsOpen] = useState(false);
     const [showAuthModal, setShowAuthModal] = useState(false);
     const [perfil, setPerfil] = useState<{ nombre: string | null, rol: string | null } | null>(null);
     const supabase = createClientComponentClient();
     const router = useRouter();
+
+    useEffect(() => {
+        const getSession = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            setSession(session);
+        };
+        getSession();
+        const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+            setSession(session);
+        });
+        return () => {
+            listener?.subscription.unsubscribe();
+        };
+    }, [supabase]);
 
     const user = session?.user;
 
