@@ -1,7 +1,6 @@
 // Definir interface para los datos
 export interface Equipo {
     nombre: string | null;
-    logo: string | null;
     stats: {
       partidos_jugados: number;
       victorias: number;

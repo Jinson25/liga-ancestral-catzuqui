@@ -58,25 +58,13 @@ export function AuthForms({ onClose }: { onClose: () => void }) {
           throw new Error('El nombre de usuario es obligatorio')
         }
 
-        // First check if email already exists in usuarios table
-        const { data: existingUser } = await supabase
-          .from('usuarios')
-          .select('correo')
-          .eq('correo', email)
-          .single()
-
-        if (existingUser) {
-          throw new Error('Este correo electrónico ya está registrado')
-        }
-
-        // Then try to sign up
+        // Registro
         const { error: signUpError, data: { user } } = await supabase.auth.signUp({
           email,
           password,
           options: {
             data: {
-              username: username,
-              role: 'equipo'
+              full_name: username
             }
           }
         })
@@ -84,23 +72,22 @@ export function AuthForms({ onClose }: { onClose: () => void }) {
         if (signUpError) throw signUpError
         if (!user) throw new Error('Error al crear el usuario')
 
-        // Insert into usuarios table
+        // Insertar perfil en la tabla perfiles
         const { error: insertError } = await supabase
-          .from('usuarios')
+          .from('perfiles')
           .insert([{
-            id: user.id, // Use the auth user's ID
-            correo: email,
+            id: user.id, // UUID de Supabase Auth
             nombre: username,
-            rol: 'equipo'
+            rol: 'usuario'
           }])
         
         if (insertError) {
-          // If insert fails, try to delete the auth user
+          // Si falla, intenta eliminar el usuario auth
           await supabase.auth.admin.deleteUser(user.id)
           throw new Error('Error al crear el perfil de usuario')
         }
 
-        // Only close and refresh if successful
+        // Solo cerrar y refrescar si todo fue exitoso
         onClose()
         router.refresh()
       }

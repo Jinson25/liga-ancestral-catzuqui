@@ -1,15 +1,21 @@
-'use client'
+import { NavBar } from "../components/layout/navBarComponents"
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
+import { DashboardPage } from '../components/dashboard/dashboard-page'
 
-import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
+export default async function Dashboard() {
+    const supabase = createServerComponentClient({ cookies })
+    const { data: { session } } = await supabase.auth.getSession()
 
-export default function DashboardPage() {
-    const router = useRouter()
+    if (!session) {
+        redirect('/')
+    }
 
-    useEffect(() => {
-        // Redirigir a la página principal del dashboard de liga
-        router.push('/dashboard/liga')
-    }, [router])
-
-    return null
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-teal-50 to-blue-50 p-4 sm:p-6">
+            <NavBar />
+            <DashboardPage />
+        </div>
+    )
 }

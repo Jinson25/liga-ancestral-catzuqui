@@ -9,42 +9,54 @@ import { AuthForms } from "./auth-forms";
 export function AuthButton({ session }: { session: Session | null }) {
     const [isOpen, setIsOpen] = useState(false);
     const [showAuthModal, setShowAuthModal] = useState(false);
-    const [userDBName, setUserDBName] = useState<string | null>(null);
+    const [perfil, setPerfil] = useState<{ nombre: string | null, rol: string | null } | null>(null);
     const supabase = createClientComponentClient();
     const router = useRouter();
 
     const user = session?.user;
 
     useEffect(() => {
-        async function fetchUserName() {
+        async function fetchOrCreatePerfil() {
             if (user) {
+                // Buscar el perfil en la tabla 'perfiles'
                 const { data, error } = await supabase
-                    .from('usuarios')
-                    .select('nombre')
+                    .from('perfiles')
+                    .select('nombre, rol')
                     .eq('id', user.id)
                     .single();
-
-                if (!error && data) {
-                    setUserDBName(data.nombre);
+                if (data) {
+                    setPerfil({ nombre: data.nombre, rol: data.rol });
+                } else if (error && error.code === 'PGRST116') { // Not found
+                    // Crear perfil si no existe
+                    const nombre = user.user_metadata.full_name || user.email;
+                    const { error: insertError } = await supabase
+                        .from('perfiles')
+                        .insert([{ id: user.id, nombre, rol: 'usuario' }]);
+                    setPerfil({ nombre, rol: 'usuario' });
+                } else {
+                    setPerfil({ nombre: null, rol: null });
                 }
+            } else {
+                setPerfil(null);
             }
         }
-        fetchUserName();
+        fetchOrCreatePerfil();
     }, [user, supabase]);
 
-    const userName = user?.user_metadata.full_name || userDBName || user?.email;
+    const userName = perfil?.nombre || user?.user_metadata.full_name || user?.email;
     const userImage = user?.user_metadata.avatar_url || `https://ui-avatars.com/api/?name=${userName}&background=random`;
 
     const handleGoogleSignIn = async () => {
         await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-                redirectTo: 'http://localhost:3000/auth/callback',
+                redirectTo: window.location.origin + '/auth/callback',
             }
         });
     }
 
     const handleSignOut = async () => {
+        setIsOpen(false);
         await supabase.auth.signOut();
         router.refresh();
     }
@@ -85,7 +97,7 @@ export function AuthButton({ session }: { session: Session | null }) {
 
                     {isOpen && (
                         <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1">
-                            <a href="/liga" className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Liga</a>
+                            <a href="/dashboard" className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Liga</a>
                             <a href="/perfil" className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Perfil</a>
                             <button
                                 onClick={handleSignOut}

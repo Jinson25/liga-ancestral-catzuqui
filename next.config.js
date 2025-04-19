@@ -21,6 +21,11 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'lh3.googleusercontent.com',
         pathname: '/a/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.google.com',
+        pathname: '/favicon.ico',
       }
     ],
   },
