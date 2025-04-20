@@ -14,10 +14,22 @@ interface UserProfile {
     avatar_url?: string
 }
 
+interface CategoriaDB {
+  nombre: string;
+}
+
+interface Equipo {
+    id: string;
+    nombre: string;
+    estado: string;
+    categoria_id: string;
+    categorias: CategoriaDB;
+}
+
 export function ProfileContent() {
     const [profile, setProfile] = useState<UserProfile | null>(null)
     const [loading, setLoading] = useState(true)
-    const [equipos, setEquipos] = useState<any[]>([])
+    const [equipos, setEquipos] = useState<Equipo[]>([])
     const [equipoLoading, setEquipoLoading] = useState(true)
     const [googleAvatar, setGoogleAvatar] = useState<string | null>(null)
     const [correo, setCorreo] = useState<string | null>(null)
@@ -65,7 +77,14 @@ export function ProfileContent() {
                 .eq('creado_por', session.user.id)
                 .order('fecha_creacion', { ascending: false })
             if (!error && data) {
-                setEquipos(data)
+                // Elimina el any en el mapeo de equipos usando un tipo explícito para categorias
+                const equiposMap = (data ?? []).map((eq: { id: string; nombre: string; estado: string; categoria_id: string; categorias: CategoriaDB[] | CategoriaDB }) => ({
+                    ...eq,
+                    categorias: Array.isArray(eq.categorias) ? eq.categorias[0] : eq.categorias
+                })) as Equipo[];
+                setEquipos(equiposMap);
+            } else {
+                setEquipos([]);
             }
             setEquipoLoading(false)
         }

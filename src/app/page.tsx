@@ -1,19 +1,19 @@
 "use client"
 
 import { NavBar } from "./components/layout/navBarComponents";
-import { NextMatch } from "./components/match/next-match";
 import { TableStandings } from "./components/standings/table-standings";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useState, useEffect } from "react";
 
 const supabase = createClientComponentClient();
 
-interface EquipoData {
+interface Temporada {
+  id: number;
   nombre: string;
 }
 
 export default function Home() {
-  const [temporadas, setTemporadas] = useState<any[]>([])
+  const [temporadas, setTemporadas] = useState<Temporada[]>([])
   const [temporadaSeleccionada, setTemporadaSeleccionada] = useState<number|null>(null)
 
   useEffect(() => {
@@ -48,7 +48,7 @@ export default function Home() {
             <div className="md:col-span-2 flex flex-col gap-6">
               {/* Próximo Partido */}
               <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 min-h-[170px]">
-                <NextMatch />
+                Proximo partido
               </div>
               {/* Tabla de posiciones */}
               <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 min-h-[170px]">

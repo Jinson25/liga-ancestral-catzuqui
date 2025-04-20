@@ -7,11 +7,29 @@ import { useParams } from "next/navigation";
 import React from "react";
 import { NavBar } from "../../components/layout/navBarComponents";
 
+// Define tipos para Equipo y Jugador
+interface Equipo {
+  id: string;
+  nombre: string;
+  estado: string;
+  categoria_id: string;
+  categorias: { nombre: string };
+  creado_por: string;
+}
+interface Jugador {
+  id: string;
+  nombre: string;
+  cedula: string;
+  fecha_nacimiento: string;
+  equipo_id: string;
+  estado: string;
+}
+
 export default function GestionEquipoPage() {
   // Next.js 14: useParams() returns unknown, so we must cast it
   const params = useParams() as { id?: string };
   const supabase = createClientComponentClient();
-  const [equipo, setEquipo] = useState<any>(null);
+  const [equipo, setEquipo] = useState<Equipo | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -20,14 +38,14 @@ export default function GestionEquipoPage() {
   const [nombreEdit, setNombreEdit] = useState("");
   const [categoriaEdit, setCategoriaEdit] = useState("");
   const [categorias, setCategorias] = useState<{ id: number; nombre: string }[]>([]);
-  const [jugadores, setJugadores] = useState<any[]>([]);
+  const [jugadores, setJugadores] = useState<Jugador[]>([]);
   const [jugadoresLoading, setJugadoresLoading] = useState(false);
   const [mensaje, setMensaje] = useState("");
   const [userRole, setUserRole] = useState<string | null>(null);
   const [estadoEdit, setEstadoEdit] = useState("");
   const [mostrarFormularioJugador, setMostrarFormularioJugador] = useState(false);
-  const [jugadorEditando, setJugadorEditando] = useState<any | null>(null);
-  const [mostrarConfirmarEliminar, setMostrarConfirmarEliminar] = useState<{ visible: boolean, jugador: any | null }>({ visible: false, jugador: null });
+  const [jugadorEditando, setJugadorEditando] = useState<Jugador | null>(null);
+  const [mostrarConfirmarEliminar, setMostrarConfirmarEliminar] = useState<{ visible: boolean, jugador: Jugador | null }>({ visible: false, jugador: null });
 
   // Cargar categorías y rol usuario
   useEffect(() => {
@@ -53,7 +71,11 @@ export default function GestionEquipoPage() {
         .eq("id", params.id)
         .single();
       if (!error && data) {
-        setEquipo(data);
+        const equipoMap: Equipo = {
+          ...data,
+          categorias: Array.isArray(data.categorias) ? data.categorias[0] : data.categorias
+        };
+        setEquipo(equipoMap);
       }
       setLoading(false);
     }
@@ -73,7 +95,7 @@ export default function GestionEquipoPage() {
     if (equipo?.id) {
       cargarJugadores();
     }
-  }, [equipo]);
+  }, [equipo, supabase, cargarJugadores]);
 
   // Cargar jugadores
   async function cargarJugadores() {
@@ -81,8 +103,8 @@ export default function GestionEquipoPage() {
     const { data, error } = await supabase
       .from("jugadores")
       .select("id, nombre, cedula, fecha_nacimiento, estado")
-      .eq("equipo_id", equipo.id);
-    if (!error && data) setJugadores(data);
+      .eq("equipo_id", equipo?.id);
+    if (!error && data) setJugadores(data as Jugador[]);
     setJugadoresLoading(false);
   }
 
@@ -92,8 +114,8 @@ export default function GestionEquipoPage() {
     setMensaje("");
     const { error } = await supabase
       .from("equipos")
-      .update({ nombre: nombreEdit, categoria_id: parseInt(categoriaEdit), estado: userRole === "presidente" ? estadoEdit : equipo.estado })
-      .eq("id", equipo.id);
+      .update({ nombre: nombreEdit, categoria_id: parseInt(categoriaEdit), estado: userRole === "presidente" ? estadoEdit : equipo?.estado })
+      .eq("id", equipo?.id);
     if (error) {
       setMensaje("Error al guardar: " + error.message);
     } else {
@@ -103,7 +125,7 @@ export default function GestionEquipoPage() {
     }
   }
 
-  async function eliminarJugador(jugadorId: number) {
+  async function eliminarJugador(jugadorId: string) {
     await supabase.from("jugadores").delete().eq("id", jugadorId);
     setMostrarConfirmarEliminar({ visible: false, jugador: null });
     cargarJugadores();
@@ -121,13 +143,13 @@ export default function GestionEquipoPage() {
         {!editando ? (
           <div className="flex flex-col gap-4">
             <div>
-              <span className="font-bold text-blue-700">Nombre:</span> {equipo.nombre}
+              <span className="font-bold text-blue-700">Nombre:</span> {equipo?.nombre}
             </div>
             <div>
-              <span className="font-bold text-blue-700">Categoría:</span> {equipo.categorias?.nombre || 'Sin categoría'}
+              <span className="font-bold text-blue-700">Categoría:</span> {equipo?.categorias?.nombre || 'Sin categoría'}
             </div>
             <div>
-              <span className="font-bold text-blue-700">Estado:</span> <span className={`inline-block text-xs px-2 py-1 rounded font-semibold shadow-sm text-center ml-2 ${equipo.estado === 'aprobado' ? 'bg-green-100 text-green-700 border border-green-300' : 'bg-yellow-100 text-yellow-700 border border-yellow-300'}`}>{equipo.estado === 'aprobado' ? 'Aprobado' : 'Pendiente'}</span>
+              <span className="font-bold text-blue-700">Estado:</span> <span className={`inline-block text-xs px-2 py-1 rounded font-semibold shadow-sm text-center ml-2 ${equipo?.estado === 'aprobado' ? 'bg-green-100 text-green-700 border border-green-300' : 'bg-yellow-100 text-yellow-700 border border-yellow-300'}`}>{equipo?.estado === 'aprobado' ? 'Aprobado' : 'Pendiente'}</span>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 mt-6">
               <button className="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold hover:bg-blue-700 transition text-base" onClick={() => setEditando(true)}>Editar equipo</button>
@@ -152,7 +174,7 @@ export default function GestionEquipoPage() {
             {/* Estado solo editable por presidente */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1">Estado</label>
-              <select value={equipo.estado} disabled className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500">
+              <select value={equipo?.estado} disabled className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500">
                 <option value="aprobado">Aprobado</option>
                 <option value="pendiente">Pendiente</option>
               </select>
@@ -202,7 +224,7 @@ export default function GestionEquipoPage() {
                     const { error } = await supabase.from("jugadores").insert({
                       nombre: form.nombre.value.trim(),
                       cedula: form.cedula.value.trim(),
-                      equipo_id: equipo.id,
+                      equipo_id: equipo?.id,
                       estado: "pendiente",
                       fecha_inscripcion: new Date().toISOString(),
                       fecha_nacimiento: form.fecha_nacimiento.value
@@ -357,14 +379,14 @@ export default function GestionEquipoPage() {
           </div>
         </div>
       )}
-      {mostrarConfirmarEliminar.visible && (
+      {mostrarConfirmarEliminar.visible && mostrarConfirmarEliminar.jugador && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm mx-2">
             <h2 className="text-lg font-bold mb-4 text-red-600">¿Eliminar jugador?</h2>
-            <p className="mb-4">Esta acción es irreversible. ¿Deseas eliminar al jugador <span className="font-semibold">{mostrarConfirmarEliminar.jugador?.nombre}</span>?</p>
+            <p className="mb-4">Esta acción es irreversible. ¿Deseas eliminar al jugador <span className="font-semibold">{mostrarConfirmarEliminar.jugador.nombre}</span>?</p>
             <div className="flex gap-2 justify-end">
               <button className="px-4 py-2 rounded bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300" onClick={() => setMostrarConfirmarEliminar({ visible: false, jugador: null })}>Cancelar</button>
-              <button className="bg-red-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-700 transition" onClick={() => eliminarJugador(mostrarConfirmarEliminar.jugador.id)}>Eliminar</button>
+              <button className="bg-red-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-700 transition" onClick={() => mostrarConfirmarEliminar.jugador && eliminarJugador(mostrarConfirmarEliminar.jugador.id)}>Eliminar</button>
             </div>
           </div>
         </div>

@@ -6,48 +6,52 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { AuthForms } from "./auth-forms";
 
-export function AuthButton() {
-    const [session, setSession] = useState<Session | null>(null);
+type Equipo = { id: string; nombre: string | null };
+
+export function AuthButton({ session: sessionProp }: { session?: Session | null }) {
+    const [session, setSession] = useState<Session | null>(sessionProp ?? null);
     const [isOpen, setIsOpen] = useState(false);
     const [showAuthModal, setShowAuthModal] = useState(false);
     const [perfil, setPerfil] = useState<{ nombre: string | null, rol: string | null } | null>(null);
-    const [equipos, setEquipos] = useState<any[]>([]);
+    const [equipos, setEquipos] = useState<Equipo[]>([]);
     const supabase = createClientComponentClient();
     const router = useRouter();
 
     useEffect(() => {
-        const getSession = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            setSession(session);
-        };
-        getSession();
-        const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-            setSession(session);
-        });
-        return () => {
-            listener?.subscription.unsubscribe();
-        };
-    }, [supabase]);
-
-    const user = session?.user;
+        if (sessionProp === undefined) {
+            const getSession = async () => {
+                const { data: { session } } = await supabase.auth.getSession();
+                setSession(session);
+            };
+            getSession();
+            const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+                setSession(session);
+            });
+            return () => {
+                listener?.subscription.unsubscribe();
+            };
+        } else {
+            setSession(sessionProp);
+        }
+    }, [supabase, sessionProp]);
 
     useEffect(() => {
         async function fetchOrCreatePerfil() {
-            if (user) {
+            if (session) {
                 // Buscar el perfil en la tabla 'perfiles'
                 const { data, error } = await supabase
                     .from('perfiles')
                     .select('nombre, rol')
-                    .eq('id', user.id)
+                    .eq('id', session.user.id)
                     .single();
                 if (data) {
                     setPerfil({ nombre: data.nombre, rol: data.rol });
                 } else if (error && error.code === 'PGRST116') { // Not found
                     // Crear perfil si no existe
-                    const nombre = user.user_metadata.full_name || user.email;
-                    const { error: insertError } = await supabase
+                    const nombre = session.user.user_metadata.full_name || session.user.email;
+                    await supabase
                         .from('perfiles')
-                        .insert([{ id: user.id, nombre, rol: 'usuario' }]);
+                        .insert([{ id: session.user.id, nombre, rol: 'usuario' }]);
                     setPerfil({ nombre, rol: 'usuario' });
                 } else {
                     setPerfil({ nombre: null, rol: null });
@@ -57,15 +61,15 @@ export function AuthButton() {
             }
         }
         fetchOrCreatePerfil();
-    }, [user, supabase]);
+    }, [session, supabase]);
 
     useEffect(() => {
         async function fetchEquipos() {
-            if (user) {
+            if (session) {
                 const { data, error } = await supabase
                     .from('equipos')
                     .select('id, nombre')
-                    .eq('representante_id', user.id)
+                    .eq('representante_id', session.user.id)
                 if (!error && data) setEquipos(data)
                 else setEquipos([])
             } else {
@@ -73,7 +77,9 @@ export function AuthButton() {
             }
         }
         fetchEquipos();
-    }, [user, supabase]);
+    }, [session, supabase]);
+
+    const user = session?.user;
 
     const userName = perfil?.nombre || user?.user_metadata.full_name || user?.email;
     const userImage = user?.user_metadata.avatar_url || `https://ui-avatars.com/api/?name=${userName}&background=random`;

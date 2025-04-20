@@ -1,5 +1,11 @@
 import { create } from 'zustand'
-import { Temporada } from '@/app/types'
+
+export interface Temporada {
+  id: number;
+  nombre: string;
+  fecha_inicio: string;
+  fecha_fin: string;
+}
 
 interface TemporadaStore {
     temporada: Temporada | null

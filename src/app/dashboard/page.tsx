@@ -2,11 +2,18 @@
 
 import { useEffect, useState, useRef } from "react"
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
-import { getRolLabel } from "@/app/lib/roles"
-import { BadgeCheck, Hourglass, Shield, Users, LayoutDashboard, Layers, ListChecks, User, Calendar, BarChart2, Settings, MessageSquare, Bell, Search, LogOut, Menu, X } from "lucide-react"
+import { BadgeCheck, Hourglass, Users, LayoutDashboard, Layers, ListChecks, User, Calendar, Settings, LogOut, Menu, X } from "lucide-react"
 import { NavBar } from "@/app/components/layout/navBarComponents"
 
-const sidebarItems = [
+type JSXElement = React.ReactElement;
+
+interface SidebarItem {
+  key: string;
+  label: string;
+  icon: JSXElement;
+}
+
+const sidebarItems: SidebarItem[] = [
   { key: "dashboard", label: "Dashboard", icon: <LayoutDashboard size={20} /> },
   { key: "equipos", label: "Aprobar Equipos", icon: <Users size={20} /> },
   { key: "categorias", label: "Categorías", icon: <Layers size={20} /> },
@@ -15,38 +22,62 @@ const sidebarItems = [
   { key: "temporadas", label: "Temporadas", icon: <Calendar size={20} /> },
 ]
 
+interface Categoria {
+  id: number
+  nombre: string
+  descripcion?: string
+}
+
+interface Equipo {
+  id: number
+  nombre: string
+  categoria_id: number
+}
+
+interface Temporada {
+  id: number
+  nombre: string
+  categoria_id: number
+  fecha_inicio: string
+  fecha_fin: string
+  equipos: number[]
+}
+
+interface NuevaTemporada {
+  nombre: string
+  categoria_id: number | ""
+  equipos: number[]
+  fecha_inicio: string
+  fecha_fin: string
+}
+
+interface Perfil {
+  id: number
+  rol: string
+}
+
 export default function DashboardPage() {
-  const [profile, setProfile] = useState<any>(null)
+  const [profile, setProfile] = useState<Perfil | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedSection, setSelectedSection] = useState<string>("dashboard")
-  const [equiposPendientes, setEquiposPendientes] = useState<any[]>([])
+  const [equiposPendientes, setEquiposPendientes] = useState<Equipo[]>([])
   const [aprobando, setAprobando] = useState<string | null>(null)
   const supabase = createClientComponentClient()
 
-  // Estados para datos reales desde Supabase
-  const [categorias, setCategorias] = useState<{id: number, nombre: string, descripcion?: string}[]>([])
-  const [equipos, setEquipos] = useState<{id: number, nombre: string, categoria_id: number}[]>([])
-  const [temporadas, setTemporadas] = useState<{id: number, nombre: string, categoria_id: number, fecha_inicio: string, fecha_fin: string, equipos: number[]}[]>([])
-  const [nuevaTemporada, setNuevaTemporada] = useState<{
-    nombre: string,
-    categoria_id: number | "",
-    equipos: number[],
-    fecha_inicio: string,
-    fecha_fin: string
-  }>({ nombre: "", categoria_id: "", equipos: [], fecha_inicio: "", fecha_fin: "" })
+  const [categorias, setCategorias] = useState<Categoria[]>([])
+  const [equipos, setEquipos] = useState<Equipo[]>([])
+  const [temporadas, setTemporadas] = useState<Temporada[]>([])
+  const [nuevaTemporada, setNuevaTemporada] = useState<NuevaTemporada>({ nombre: "", categoria_id: "", equipos: [], fecha_inicio: "", fecha_fin: "" })
   const [selectAllEquipos, setSelectAllEquipos] = useState(false)
 
-  // --- Categorías ---
   const [nuevaCategoria, setNuevaCategoria] = useState("")
   const [nuevaDescripcionCategoria, setNuevaDescripcionCategoria] = useState("")
   const [editandoCategoriaId, setEditandoCategoriaId] = useState<number|null>(null)
   const [editNombreCategoria, setEditNombreCategoria] = useState("")
   const [editDescripcionCategoria, setEditDescripcionCategoria] = useState("")
 
-  // --- NUEVO: Edición de equipos de temporada ---
   const editRef = useRef<HTMLDivElement>(null)
 
-  // Estado para edición de equipos en temporada
   const [editandoTemporadaId, setEditandoTemporadaId] = useState<number|null>(null)
   const [equiposEditTemp, setEquiposEditTemp] = useState<number[]>([])
 
@@ -62,12 +93,11 @@ export default function DashboardPage() {
     }
     setNuevaCategoria("")
     setNuevaDescripcionCategoria("")
-    // Refrescar categorías
     const { data: categoriasData } = await supabase.from('categorias').select('id, nombre, descripcion')
     if (categoriasData) setCategorias(categoriasData)
   }
 
-  function startEditarCategoria(cat: {id: number, nombre: string, descripcion?: string}) {
+  function startEditarCategoria(cat: Categoria) {
     setEditandoCategoriaId(cat.id)
     setEditNombreCategoria(cat.nombre)
     setEditDescripcionCategoria(cat.descripcion || "")
@@ -89,7 +119,6 @@ export default function DashboardPage() {
     setEditandoCategoriaId(null)
     setEditNombreCategoria("")
     setEditDescripcionCategoria("")
-    // Refrescar categorías
     const { data: categoriasData } = await supabase.from('categorias').select('id, nombre, descripcion')
     if (categoriasData) setCategorias(categoriasData)
   }
@@ -125,22 +154,19 @@ export default function DashboardPage() {
     fetchEquipos()
   }, [supabase, aprobando])
 
-  async function aprobarEquipo(equipoId: string) {
-    setAprobando(equipoId)
-    // 1. Aprobar el equipo
+  async function aprobarEquipo(equipoId: number) {
+    setAprobando(String(equipoId))
     await supabase
       .from('equipos')
       .update({ estado: 'aprobado' })
       .eq('id', equipoId)
 
-    // 2. Obtener el equipo para saber el usuario creador
     const { data: equipo } = await supabase
       .from('equipos')
       .select('creado_por')
       .eq('id', equipoId)
       .single()
 
-    // 3. Asignar rol "equipo" al usuario creador (en la tabla perfiles)
     if (equipo?.creado_por) {
       await supabase
         .from('perfiles')
@@ -149,7 +175,6 @@ export default function DashboardPage() {
     }
 
     setAprobando(null)
-    // Refresca lista
     const { data, error } = await supabase
       .from('equipos')
       .select('id, nombre, estado, categoria_id, categorias(nombre), creado_por')
@@ -160,21 +185,15 @@ export default function DashboardPage() {
     }
   }
 
-  // Cargar datos reales de Supabase
   useEffect(() => {
     async function fetchData() {
-      // Categorías
       const { data: categoriasData } = await supabase.from('categorias').select('id, nombre, descripcion')
       if (categoriasData) setCategorias(categoriasData)
-      // Equipos
       const { data: equiposData } = await supabase.from('equipos').select('id, nombre, categoria_id')
       if (equiposData) setEquipos(equiposData)
-      // Temporadas
       const { data: temporadasData } = await supabase.from('temporadas').select('id, nombre, categoria_id, fecha_inicio, fecha_fin')
-      // Equipos por temporada
       const { data: equiposTemporadaData } = await supabase.from('equipos_temporada').select('equipo_id, temporada_id')
       if (temporadasData && equiposTemporadaData) {
-        // Asocia equipos a cada temporada
         const temporadasConEquipos = temporadasData.map(temp => ({
           ...temp,
           equipos: equiposTemporadaData.filter(et => et.temporada_id === temp.id).map(et => et.equipo_id)
@@ -183,17 +202,14 @@ export default function DashboardPage() {
       }
     }
     fetchData()
-  }, [])
+  }, [supabase])
 
-  // Handlers para la sección de temporadas
   async function handleCrearTemporada(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    // Validar fechas
     if (!nuevaTemporada.fecha_inicio || !nuevaTemporada.fecha_fin) {
       alert('Debes ingresar la fecha de inicio y fin')
       return
     }
-    // Insertar temporada
     const { data: tempData, error: tempError } = await supabase.from('temporadas').insert({
       nombre: nuevaTemporada.nombre,
       categoria_id: nuevaTemporada.categoria_id,
@@ -205,13 +221,10 @@ export default function DashboardPage() {
       return
     }
 
-    // Asociar equipos a la temporada y crear posiciones
     if (tempData && nuevaTemporada.equipos && nuevaTemporada.equipos.length > 0) {
-      // Insertar en equipos_temporada
       const insertData = nuevaTemporada.equipos.map(equipo_id => ({ equipo_id, temporada_id: tempData.id }))
       await supabase.from('equipos_temporada').insert(insertData)
 
-      // Crear posiciones en 0 para cada equipo
       const posiciones = nuevaTemporada.equipos.map(equipo_id => ({
         temporada_id: tempData.id,
         equipo_id,
@@ -227,7 +240,6 @@ export default function DashboardPage() {
     }
     setNuevaTemporada({ nombre: "", categoria_id: "", equipos: [], fecha_inicio: "", fecha_fin: "" })
     setSelectAllEquipos(false)
-    // Recargar temporadas y asociaciones
     const { data: temporadasData } = await supabase.from('temporadas').select('id, nombre, categoria_id, fecha_inicio, fecha_fin')
     const { data: equiposTemporadaData } = await supabase.from('equipos_temporada').select('equipo_id, temporada_id')
     if (temporadasData && equiposTemporadaData) {
@@ -236,26 +248,6 @@ export default function DashboardPage() {
         equipos: equiposTemporadaData.filter(et => et.temporada_id === temp.id).map(et => et.equipo_id)
       }))
       setTemporadas(temporadasConEquipos)
-    }
-  }
-
-  async function agregarEquipoATemporada(equipo_id: number, temporada_id: number) {
-    // Insertar en equipos_temporada si no existe
-    await supabase.from('equipos_temporada').insert({ equipo_id, temporada_id })
-    // Insertar en posiciones SOLO si no existe ese equipo-temporada
-    const { data: existe, error } = await supabase.from('posiciones').select('id').eq('temporada_id', temporada_id).eq('equipo_id', equipo_id).maybeSingle()
-    if (!existe) {
-      await supabase.from('posiciones').insert({
-        temporada_id,
-        equipo_id,
-        puntos: 0,
-        partidos_jugados: 0,
-        victorias: 0,
-        empates: 0,
-        derrotas: 0,
-        goles_favor: 0,
-        goles_contra: 0
-      })
     }
   }
 
@@ -279,7 +271,6 @@ export default function DashboardPage() {
     }
   }
 
-  // Iniciar edición
   function startEditarTemporada(tempId: number, equipos: number[]) {
     setEditandoTemporadaId(tempId)
     setEquiposEditTemp([...equipos])
@@ -287,19 +278,16 @@ export default function DashboardPage() {
       editRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })
     }, 100)
   }
-  // Cancelar edición
+
   function cancelarEditarTemporada() {
     setEditandoTemporadaId(null)
     setEquiposEditTemp([])
   }
-  // Guardar edición
+
   async function guardarEditarTemporada(tempId: number) {
-    // Quitar todos los equipos actuales
     await supabase.from('equipos_temporada').delete().eq('temporada_id', tempId)
-    // Insertar los nuevos
     const insertData = equiposEditTemp.map(equipo_id => ({ equipo_id, temporada_id: tempId }))
     if (insertData.length > 0) await supabase.from('equipos_temporada').insert(insertData)
-    // Chequear posiciones (crear si no existe)
     for (const equipo_id of equiposEditTemp) {
       const { data: existe } = await supabase.from('posiciones').select('id').eq('temporada_id', tempId).eq('equipo_id', equipo_id).maybeSingle()
       if (!existe) {
@@ -316,7 +304,6 @@ export default function DashboardPage() {
         })
       }
     }
-    // Refrescar temporadas
     const { data: temporadasData } = await supabase.from('temporadas').select('id, nombre, categoria_id, fecha_inicio, fecha_fin')
     const { data: equiposTemporadaData } = await supabase.from('equipos_temporada').select('equipo_id, temporada_id')
     if (temporadasData && equiposTemporadaData) {
@@ -333,7 +320,7 @@ export default function DashboardPage() {
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center text-xl text-gray-900 bg-gray-50">Cargando...</div>
   }
-  if (!profile || (profile.rol !== 'presidente' && profile.rol !== 'admin_liga')) {
+  if (!profile || profile.rol !== 'presidente' && profile.rol !== 'admin_liga') {
     return <div className="min-h-screen flex items-center justify-center text-xl text-red-400 bg-gray-50">Acceso denegado: solo presidentes o administradores pueden ver este panel.</div>
   }
 
@@ -451,9 +438,9 @@ export default function DashboardPage() {
                       <button
                         onClick={() => aprobarEquipo(equipo.id)}
                         className="inline-flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-green-400 to-blue-400 hover:from-green-500 hover:to-blue-600 text-white rounded-lg font-bold shadow transition disabled:opacity-60 disabled:cursor-not-allowed"
-                        disabled={aprobando === equipo.id}
+                        disabled={String(aprobando) === String(equipo.id)}
                       >
-                        <BadgeCheck className="w-5 h-5" /> {aprobando === equipo.id ? 'Aprobando...' : 'Aprobar'}
+                        <BadgeCheck className="w-5 h-5" /> {String(aprobando) === String(equipo.id) ? 'Aprobando...' : 'Aprobar'}
                       </button>
                     </div>
                   ))}

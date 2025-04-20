@@ -14,13 +14,22 @@ export default function CrearEquipoPage() {
   const supabase = createClientComponentClient();
   const router = useRouter();
 
+  // Define el tipo correcto para Equipo
+  interface Equipo {
+    id: string;
+    nombre: string;
+    estado: string;
+    categoria_id: string;
+    categorias: { nombre: string };
+  }
+
   // --- NUEVO: Mostrar equipos del usuario arriba del formulario ---
-  const [equipos, setEquipos] = useState<any[]>([]);
+  const [equipos, setEquipos] = useState<Equipo[]>([]);
   const [equiposLoading, setEquiposLoading] = useState(true);
 
   useEffect(() => {
     async function fetchCategorias() {
-      const { data, error } = await supabase.from("categorias").select("id, nombre");
+      const { data } = await supabase.from("categorias").select("id, nombre");
       if (data) {
         setCategorias(data);
       }
@@ -37,13 +46,21 @@ export default function CrearEquipoPage() {
         setEquiposLoading(false);
         return;
       }
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('equipos')
         .select('id, nombre, estado, categoria_id, categorias(nombre)')
         .eq('creado_por', session.user.id)
         .order('fecha_creacion', { ascending: false });
-      if (!error && data) {
-        setEquipos(data);
+      if (data) {
+        // Corrige el tipo del mapeo para evitar conflicto entre datos crudos y Equipo
+        interface CategoriaDB {
+          nombre: string;
+        }
+        const equiposMap = (data ?? []).map((eq: { id: string; nombre: string; estado: string; categoria_id: string; categorias: CategoriaDB[] | CategoriaDB }) => ({
+          ...eq,
+          categorias: Array.isArray(eq.categorias) ? eq.categorias[0] : eq.categorias
+        })) as Equipo[];
+        setEquipos(equiposMap);
       } else {
         setEquipos([]);
       }
@@ -63,7 +80,7 @@ export default function CrearEquipoPage() {
       return;
     }
     // Insertar equipo en estado 'pendiente' con categoria_id y creado_por correctos
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("equipos")
       .insert([
         {
@@ -76,9 +93,7 @@ export default function CrearEquipoPage() {
       .select("id")
       .single();
     setLoading(false);
-    if (error) {
-      setMensaje("Error al crear el equipo: " + error.message);
-    } else if (data && data.id) {
+    if (data && data.id) {
       setMensaje("Equipo creado correctamente. Redirigiendo...");
       setNombre("");
       setCategoria("");
@@ -120,7 +135,7 @@ export default function CrearEquipoPage() {
                       <span>Categoría</span>
                       <span className="text-center">Estado</span>
                     </li>
-                    {equipos.map(eq => (
+                    {equipos.map((eq: Equipo) => (
                       <li
                         key={eq.id}
                         className="flex flex-col lg:grid lg:grid-cols-4 gap-2 lg:gap-6 items-start lg:items-center py-4 px-4 lg:px-8 hover:bg-blue-50 transition rounded-xl w-full"
