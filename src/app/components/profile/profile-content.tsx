@@ -173,6 +173,9 @@ export function ProfileContent() {
                                                 )}
                                             </div>
                                             <div className="text-gray-700 text-sm">Categoría: <span className="font-semibold text-blue-700">{equipo.categorias?.nombre || 'Sin categoría'}</span></div>
+                                            {equipo.estado === 'aprobado' && (
+                                               <a href={`/equipo/${equipo.id}`} className="inline-block mt-2 w-fit px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition text-sm shadow-md">Gestionar equipo</a>
+                                             )}
                                         </div>
                                     ))}
                                 </div>

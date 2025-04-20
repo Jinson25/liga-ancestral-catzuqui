@@ -7,6 +7,8 @@ export default function Perfil() {
         <div className="min-h-screen bg-gradient-to-br from-teal-50 to-blue-50 p-4 sm:p-6">
             <NavBar />
             <ProfileContent />
+            {/* Espacio extra para móvil para evitar que el NavBar tape info */}
+            <div className="block lg:hidden h-24" />
         </div>
         </>
     )

@@ -1,7 +1,6 @@
 "use client"
 
 import { NavBar } from "./components/layout/navBarComponents";
-import { Calendar, Users } from "lucide-react";
 import { NextMatch } from "./components/match/next-match";
 import { TableStandings } from "./components/standings/table-standings";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";

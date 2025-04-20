@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react"
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import { getRolLabel } from "@/app/lib/roles"
-import { BadgeCheck, Hourglass, Shield, Users, LayoutDashboard, Layers, ListChecks, User, Calendar, BarChart2, Settings, MessageSquare, Bell, Search, LogOut } from "lucide-react"
+import { BadgeCheck, Hourglass, Shield, Users, LayoutDashboard, Layers, ListChecks, User, Calendar, BarChart2, Settings, MessageSquare, Bell, Search, LogOut, Menu, X } from "lucide-react"
 import { NavBar } from "@/app/components/layout/navBarComponents"
 
 const sidebarItems = [
@@ -49,6 +49,8 @@ export default function DashboardPage() {
   // Estado para edición de equipos en temporada
   const [editandoTemporadaId, setEditandoTemporadaId] = useState<number|null>(null)
   const [equiposEditTemp, setEquiposEditTemp] = useState<number[]>([])
+
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   async function handleCrearCategoria(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -125,10 +127,27 @@ export default function DashboardPage() {
 
   async function aprobarEquipo(equipoId: string) {
     setAprobando(equipoId)
+    // 1. Aprobar el equipo
     await supabase
       .from('equipos')
       .update({ estado: 'aprobado' })
       .eq('id', equipoId)
+
+    // 2. Obtener el equipo para saber el usuario creador
+    const { data: equipo } = await supabase
+      .from('equipos')
+      .select('creado_por')
+      .eq('id', equipoId)
+      .single()
+
+    // 3. Asignar rol "equipo" al usuario creador (en la tabla perfiles)
+    if (equipo?.creado_por) {
+      await supabase
+        .from('perfiles')
+        .update({ rol: 'equipo' })
+        .eq('id', equipo.creado_por)
+    }
+
     setAprobando(null)
     // Refresca lista
     const { data, error } = await supabase
@@ -319,12 +338,54 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-teal-50 to-blue-50 p-4 sm:p-6">
+    <div className="min-h-screen bg-gradient-to-br from-teal-50 to-blue-50 p-0 md:p-6">
       {/* NavBar global arriba */}
       <NavBar />
+
+      {/* Sidebar móvil: menú superior tipo tabs u opciones horizontales */}
+      <div className="md:hidden sticky top-0 z-40 bg-white shadow-sm border-b border-blue-100 flex items-center justify-between px-2 py-2">
+        <button onClick={() => setMobileMenuOpen(v => !v)} className="p-2 rounded-lg text-blue-700 hover:bg-blue-50 focus:outline-none">
+          {mobileMenuOpen ? <X size={28}/> : <Menu size={28}/>}<span className="sr-only">Abrir menú</span>
+        </button>
+        <div className="flex-1 flex justify-center gap-1 overflow-x-auto">
+          {sidebarItems.map(item => (
+            <button
+              key={item.key}
+              onClick={() => { setSelectedSection(item.key); setMobileMenuOpen(false); }}
+              className={`flex flex-col items-center px-2 py-1 mx-1 rounded-md text-xs font-semibold ${selectedSection === item.key ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-blue-50'}`}
+            >
+              {item.icon}
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+      {/* Drawer lateral solo si está abierto */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex md:hidden" onClick={() => setMobileMenuOpen(false)}>
+          <aside className="bg-white w-64 h-full shadow-lg animate-slide-in-left p-4 flex flex-col gap-2" onClick={e => e.stopPropagation()}>
+            <button className="self-end mb-2" onClick={() => setMobileMenuOpen(false)}><X size={28}/></button>
+            {sidebarItems.map(item => (
+              <button
+                key={item.key}
+                onClick={() => { setSelectedSection(item.key); setMobileMenuOpen(false); }}
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition font-semibold text-left w-full text-gray-700 ${selectedSection === item.key ? 'bg-blue-100 text-blue-700 shadow' : 'hover:bg-blue-50'}`}
+              >
+                {item.icon}
+                <span>{item.label}</span>
+              </button>
+            ))}
+            <div className="mt-auto flex flex-col gap-2 px-4">
+              <button className="flex items-center gap-2 text-gray-400 hover:text-blue-600 transition"><Settings size={18}/> Configuración</button>
+              <button className="flex items-center gap-2 text-gray-400 hover:text-blue-600 transition"><LogOut size={18}/> Salir</button>
+            </div>
+          </aside>
+        </div>
+      )}
+
       <div className="flex flex-1">
-        {/* Sidebar claro, sin título extra */}
-        <aside className="w-60  flex flex-col py-8 px-2 gap-2 min-h-screen">
+        {/* Sidebar desktop */}
+        <aside className="w-60 hidden md:flex flex-col py-8 px-2 gap-2 min-h-screen bg-white border-r border-gray-100">
           {sidebarItems.map(item => (
             <button
               key={item.key}
@@ -343,7 +404,7 @@ export default function DashboardPage() {
         {/* Main content */}
         <main className="flex-1 flex flex-col min-h-screen">
           {/* Dashboard Grid */}
-          <section className="flex-1 p-8">
+          <section className="flex-1 p-2 md:p-8">
             {/* Mostrar solo el dashboard principal si está seleccionada esa sección */}
             {selectedSection === "dashboard" && (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-8">
@@ -606,6 +667,8 @@ export default function DashboardPage() {
           </section>
         </main>
       </div>
+      {/* Espacio extra para móvil para evitar que el NavBar tape info */}
+      <div className="block lg:hidden h-24" />
     </div>
   )
 }

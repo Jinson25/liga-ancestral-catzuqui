@@ -11,6 +11,7 @@ export function AuthButton() {
     const [isOpen, setIsOpen] = useState(false);
     const [showAuthModal, setShowAuthModal] = useState(false);
     const [perfil, setPerfil] = useState<{ nombre: string | null, rol: string | null } | null>(null);
+    const [equipos, setEquipos] = useState<any[]>([]);
     const supabase = createClientComponentClient();
     const router = useRouter();
 
@@ -56,6 +57,22 @@ export function AuthButton() {
             }
         }
         fetchOrCreatePerfil();
+    }, [user, supabase]);
+
+    useEffect(() => {
+        async function fetchEquipos() {
+            if (user) {
+                const { data, error } = await supabase
+                    .from('equipos')
+                    .select('id, nombre')
+                    .eq('representante_id', user.id)
+                if (!error && data) setEquipos(data)
+                else setEquipos([])
+            } else {
+                setEquipos([])
+            }
+        }
+        fetchEquipos();
     }, [user, supabase]);
 
     const userName = perfil?.nombre || user?.user_metadata.full_name || user?.email;
@@ -111,8 +128,26 @@ export function AuthButton() {
                     </button>
 
                     {isOpen && (
-                        <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
-                            <a href="/dashboard" className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Liga</a>
+                        <div className="absolute right-0 mt-2 w-64 bg-white rounded-md shadow-lg py-1 z-50">
+                            {/* GESTIONAR LIGA solo para presidente, lleva a dashboard */}
+                            {perfil?.rol === 'presidente' && (
+                                <a href="/dashboard" className="block w-full text-left px-4 py-2 text-sm text-blue-700 font-semibold hover:bg-gray-100">Gestionar Liga</a>
+                            )}
+                            {/* GESTIONAR EQUIPO si tiene equipos, CREAR EQUIPO si no tiene */}
+                            {perfil?.rol !== 'presidente' && equipos.length > 0 && (
+                                <>
+                                    <span className="block px-4 py-2 text-xs text-gray-500">Tus equipos</span>
+                                    {equipos.map(eq => (
+                                        <a key={eq.id} href={`/equipo/${eq.id}`} className="block w-full text-left px-6 py-1 text-sm text-gray-700 hover:bg-gray-100">{eq.nombre}</a>
+                                    ))}
+                                    <a href="/crear-equipo" className="block w-full text-left px-4 py-2 text-sm text-blue-700 font-semibold hover:bg-gray-100">Gestionar equipo</a>
+                                </>
+                            )}
+                            {perfil?.rol !== 'presidente' && equipos.length === 0 && (
+                                <a href="/crear-equipo" className="block w-full text-left px-4 py-2 text-sm text-blue-700 font-semibold hover:bg-gray-100">Crear equipo</a>
+                            )}
+                            {/* Liga (dashboard) solo para presidente */}
+                            {/* <a href="/dashboard" className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Liga</a> */}
                             <a href="/perfil" className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Perfil</a>
                             <button
                                 onClick={handleSignOut}
