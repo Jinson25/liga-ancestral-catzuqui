@@ -3,191 +3,115 @@
 import { useEffect, useState } from "react"
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 
-interface EquipoStats {
-    id: string
-    nombre: string
-    stats: {
-        partidos_jugados: number
-        victorias: number
-        empates: number
-        derrotas: number
-        goles_a_favor: number
-        goles_encontra: number
-        puntos: number
-    }
+interface Posicion {
+  id: number
+  equipo_id: number
+  temporada_id: number
+  puntos: number
+  partidos_jugados: number
+  victorias: number
+  empates: number
+  derrotas: number
+  goles_favor: number
+  goles_contra: number
 }
 
-export const TableStandings = () => {
-    const [equipos, setEquipos] = useState<EquipoStats[]>([])
-    const [loading, setLoading] = useState(true)
-    const [error, setError] = useState('')
+interface TableStandingsProps {
+  temporadaId: number
+}
 
-    const supabase = createClientComponentClient()
+export const TableStandings = ({ temporadaId }: TableStandingsProps) => {
+  const [posiciones, setPosiciones] = useState<Posicion[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+  const [equipos, setEquipos] = useState<{ id: number, nombre: string }[]>([])
+  const supabase = createClientComponentClient()
 
-    useEffect(() => {
-        cargarEstadisticas()
-    }, [])
+  useEffect(() => {
+    cargarPosiciones()
+    cargarEquipos()
+    // eslint-disable-next-line
+  }, [temporadaId])
 
-    async function cargarEstadisticas() {
-        try {
-            setLoading(true)
-            setError('')
-
-            // Obtener los equipos con sus estadísticas
-            const { data: equiposData, error: equiposError } = await supabase
-                .from('equipos')
-                .select(`
-                    id,
-                    nombre,
-                    partidos_local:partidos!partidos_equipo_local_id_fkey (
-                        goles_local,
-                        goles_visitante
-                    ),
-                    partidos_visitante:partidos!partidos_equipo_visitante_id_fkey (
-                        goles_local,
-                        goles_visitante
-                    )
-                `)
-                .eq('aprobado', true)
-
-            if (equiposError) throw equiposError
-
-            // Procesar y combinar las estadísticas
-            const equiposConStats = equiposData.map(equipo => {
-                let partidos_jugados = 0
-                let victorias = 0
-                let empates = 0
-                let derrotas = 0
-                let goles_a_favor = 0
-                let goles_encontra = 0
-
-                // Procesar partidos como local
-                equipo.partidos_local?.forEach(partido => {
-                    if (partido.goles_local !== null && partido.goles_visitante !== null) {
-                        partidos_jugados++
-                        goles_a_favor += partido.goles_local
-                        goles_encontra += partido.goles_visitante
-
-                        if (partido.goles_local > partido.goles_visitante) victorias++
-                        else if (partido.goles_local === partido.goles_visitante) empates++
-                        else derrotas++
-                    }
-                })
-
-                // Procesar partidos como visitante
-                equipo.partidos_visitante?.forEach(partido => {
-                    if (partido.goles_local !== null && partido.goles_visitante !== null) {
-                        partidos_jugados++
-                        goles_a_favor += partido.goles_visitante
-                        goles_encontra += partido.goles_local
-
-                        if (partido.goles_visitante > partido.goles_local) victorias++
-                        else if (partido.goles_visitante === partido.goles_local) empates++
-                        else derrotas++
-                    }
-                })
-
-                const puntos = (victorias * 3) + empates
-
-                return {
-                    id: equipo.id,
-                    nombre: equipo.nombre,
-                    stats: {
-                        partidos_jugados,
-                        victorias,
-                        empates,
-                        derrotas,
-                        goles_a_favor,
-                        goles_encontra,
-                        puntos
-                    }
-                }
-            })
-
-            setEquipos(equiposConStats)
-
-        } catch (err) {
-            console.error('Error completo:', err)
-            setError('Error al cargar estadísticas')
-        } finally {
-            setLoading(false)
-        }
+  async function cargarPosiciones() {
+    setLoading(true)
+    setError("")
+    const { data, error } = await supabase
+      .from('posiciones')
+      .select('id,equipo_id,temporada_id,puntos,partidos_jugados,victorias,empates,derrotas,goles_favor,goles_contra')
+      .eq('temporada_id', temporadaId)
+    if (error) {
+      setError("Error al cargar posiciones")
+      setLoading(false)
+      return
     }
+    setPosiciones(data || [])
+    setLoading(false)
+  }
 
-    if (loading) return (
-        <div className="lg:col-span-2 bg-white rounded-2xl p-4 sm:p-6 shadow-sm">
-            <div className="text-center py-8">Cargando tabla de posiciones...</div>
-        </div>
-    )
+  async function cargarEquipos() {
+    // Carga todos los equipos y sus nombres
+    const { data, error } = await supabase.from('equipos').select('id, nombre')
+    if (!error && data) setEquipos(data)
+  }
 
-    if (error) return (
-        <div className="lg:col-span-2 bg-white rounded-2xl p-4 sm:p-6 shadow-sm">
-            <div className="text-center text-red-500 py-8">{error}</div>
-        </div>
-    )
+  if (loading) return <div className="bg-white rounded-2xl p-4 text-center">Cargando posiciones...</div>
+  if (error) return <div className="bg-white rounded-2xl p-4 text-red-500 text-center">{error}</div>
 
-    return (
-        <div className="lg:col-span-2 bg-white rounded-2xl p-4 sm:p-6 shadow-sm">
-            <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold">Tabla de Posiciones</h2>
-                <button className="text-sm text-teal-600 hover:text-teal-700">
-                    Ver completa
-                </button>
-            </div>
-            <div className="overflow-x-auto">
-                <table className="w-full">
-                    <thead>
-                        <tr className="text-left text-sm text-gray-500">
-                            <th className="pb-4">Pos</th>
-                            <th className="pb-4">Equipo</th>
-                            <th className="pb-4">PJ</th>
-                            <th className="pb-4 px-1">G</th>
-                            <th className="pb-4 px-1">E</th>
-                            <th className="pb-4 px-1">P</th>
-                            <th className="pb-4">GF</th>
-                            <th className="pb-4">GC</th>
-                            <th className="pb-4">DG</th>
-                            <th className="pb-4">PTS</th>
-                        </tr>
-                    </thead>
-                    <tbody className="text-sm">
-                        {equipos
-                            .sort((a, b) => {
-                                // Primero ordenar por puntos
-                                if (b.stats.puntos !== a.stats.puntos) {
-                                    return b.stats.puntos - a.stats.puntos
-                                }
-                                // Si los puntos son iguales, ordenar por diferencia de goles
-                                const difGolesA = a.stats.goles_a_favor - a.stats.goles_encontra
-                                const difGolesB = b.stats.goles_a_favor - b.stats.goles_encontra
-                                if (difGolesB !== difGolesA) {
-                                    return difGolesB - difGolesA
-                                }
-                                // Si la diferencia de goles es igual, ordenar por goles a favor
-                                return b.stats.goles_a_favor - a.stats.goles_a_favor
-                            })
-                            .map((equipo, index) => {
-                                const { partidos_jugados, victorias, empates, derrotas, goles_a_favor, goles_encontra, puntos } = equipo.stats
-                                const diferencia_goles = goles_a_favor - goles_encontra
-
-                                return (
-                                    <tr key={equipo.id} className="border-t border-gray-100">
-                                        <td className="py-2">{index + 1}</td>
-                                        <td className="py-2 font-medium">{equipo.nombre}</td>
-                                        <td className="py-2">{partidos_jugados}</td>
-                                        <td className="py-2 px-1">{victorias}</td>
-                                        <td className="py-2 px-1">{empates}</td>
-                                        <td className="py-2 px-1">{derrotas}</td>
-                                        <td className="py-2">{goles_a_favor}</td>
-                                        <td className="py-2">{goles_encontra}</td>
-                                        <td className="py-2">{diferencia_goles}</td>
-                                        <td className="py-2 font-bold">{puntos}</td>
-                                    </tr>
-                                )
-                            })}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    )
+  return (
+    <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-4 sm:p-8 shadow-lg border border-blue-200">
+      <h2 className="text-2xl font-extrabold mb-6 text-blue-900 flex items-center gap-2">
+        <svg xmlns='http://www.w3.org/2000/svg' className='h-7 w-7 text-yellow-400' viewBox='0 0 20 20' fill='currentColor'><path d='M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.967a1 1 0 00.95.69h4.175c.969 0 1.371 1.24.588 1.81l-3.38 2.455a1 1 0 00-.364 1.118l1.287 3.966c.3.922-.755 1.688-1.54 1.118l-3.38-2.455a1 1 0 00-1.175 0l-3.38 2.455c-.784.57-1.838-.196-1.54-1.118l1.287-3.966a1 1 0 00-.364-1.118L2.05 9.394c-.783-.57-.38-1.81.588-1.81h4.175a1 1 0 00.95-.69l1.286-3.967z'/></svg>
+        Tabla de Posiciones
+      </h2>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm text-blue-900">
+          <thead>
+            <tr className="bg-blue-200/50 text-blue-900">
+              <th className="pb-3 pt-2 rounded-tl-xl">Pos</th>
+              <th className="pb-3 pt-2">Equipo</th>
+              <th className="pb-3 pt-2">PJ</th>
+              <th className="pb-3 pt-2">G</th>
+              <th className="pb-3 pt-2">E</th>
+              <th className="pb-3 pt-2">P</th>
+              <th className="pb-3 pt-2">GF</th>
+              <th className="pb-3 pt-2">GC</th>
+              <th className="pb-3 pt-2">DG</th>
+              <th className="pb-3 pt-2 rounded-tr-xl">PTS</th>
+            </tr>
+          </thead>
+          <tbody className="font-semibold">
+            {posiciones
+              .sort((a, b) => {
+                if (b.puntos !== a.puntos) return b.puntos - a.puntos
+                const dgA = a.goles_favor - a.goles_contra
+                const dgB = b.goles_favor - b.goles_contra
+                if (dgB !== dgA) return dgB - dgA
+                return b.goles_favor - a.goles_favor
+              })
+              .map((pos, idx) => {
+                const equipo = equipos.find(eq => eq.id === pos.equipo_id)
+                return (
+                  <tr key={pos.id} className={`border-t border-blue-100 ${idx === 0 ? 'bg-yellow-100/60 animate-pulse' : idx % 2 === 0 ? 'bg-white' : 'bg-blue-50'}`}>
+                    <td className="py-2 text-center text-lg font-bold">{idx + 1}</td>
+                    <td className="py-2 font-bold flex items-center gap-2">
+                      <span className="inline-block w-2 h-2 rounded-full bg-blue-400"></span>
+                      {equipo ? equipo.nombre : pos.equipo_id}
+                    </td>
+                    <td className="py-2 text-center">{pos.partidos_jugados}</td>
+                    <td className="py-2 text-center">{pos.victorias}</td>
+                    <td className="py-2 text-center">{pos.empates}</td>
+                    <td className="py-2 text-center">{pos.derrotas}</td>
+                    <td className="py-2 text-center">{pos.goles_favor}</td>
+                    <td className="py-2 text-center">{pos.goles_contra}</td>
+                    <td className="py-2 text-center">{pos.goles_favor - pos.goles_contra}</td>
+                    <td className="py-2 text-center text-blue-700 font-extrabold">{pos.puntos}</td>
+                  </tr>
+                )
+              })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
 }
