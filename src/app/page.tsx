@@ -51,8 +51,8 @@ export default function Home() {
                 Proximo partido
               </div>
               {/* Tabla de posiciones */}
-              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 min-h-[170px]">
-                <div className="flex items-center justify-between mb-4">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 min-h-[170px] overflow-hidden">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
                   <h2 className="text-base font-bold text-gray-800">Tabla de Posiciones</h2>
                   <select
                     className="border border-gray-200 rounded px-3 py-1 text-gray-700 font-semibold bg-white"

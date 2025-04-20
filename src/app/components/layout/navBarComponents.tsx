@@ -13,13 +13,8 @@ function MobileBottomNav({ isLoggedIn, userRole, showButton }: { isLoggedIn: boo
       <Link href="/" className="flex flex-col items-center text-blue-700 hover:text-blue-900 text-xs font-semibold">
         <Trophy className="w-6 h-6 mb-1" />Inicio
       </Link>
-      {/* Dashboard solo si logeado y rol permitido */}
-      {isLoggedIn && ["presidente", "admin_liga", "vocal", "secretario", "tribunal"].includes(userRole || "") && (
-        <Link href="/dashboard" className="flex flex-col items-center text-blue-700 hover:text-blue-900 text-xs font-semibold">
-          <Search className="w-6 h-6 mb-1" />Dashboard
-        </Link>
-      )}
-      {/* Botón azul: Gestionar Liga o Crear equipo */}
+      
+      {/* Botón azul: Gestionar Liga o Crear equipo - CENTRADO */}
       {isLoggedIn && showButton === 'gestionar' && (
         <Link href="/dashboard" className="flex flex-col items-center">
           <span className="inline-block w-6 h-6 mb-1 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold">⚡</span>
